@@ -47,3 +47,11 @@ export const createStudent = async (payload: {
 export const deleteStudent = async (id: string) => {
   await api.delete(`/students/${id}`);
 };
+
+/**
+ * UPDATE
+ */
+export const updateStudent = async (id: string, payload: { name: string; email: string }) => {
+  const { data } = await api.put(`/students/${id}`, payload);
+  return data;
+};

@@ -36,3 +36,4 @@ export const deleteStudent = async (id: string) => {
 
   if (!res.ok) throw new Error("Failed to delete student");
 };
+
