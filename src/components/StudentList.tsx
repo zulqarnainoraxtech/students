@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchStudents, deleteStudent, updateStudent } from "@/lib/api1";
+import { fetchStudents, deleteStudent } from "@/lib/api1";
+import { Student } from "@/app/page";
 
-export default function StudentList() {
+interface StudentListProps {
+  onEdit: (student: Student) => void;
+}
+
+export default function StudentList({ onEdit }: StudentListProps) {
   const queryClient = useQueryClient();
-  const { data, isLoading, isError } = useQuery({ 
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["students"],
-    queryFn: fetchStudents 
+    queryFn: fetchStudents
   });
 
   const deleteMutation = useMutation({
@@ -16,84 +20,44 @@ export default function StudentList() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, name, email }: { id: string; name: string; email: string }) =>
-      updateStudent(id, { name, email }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
-  });
-
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-
-  const startEdit = (student: { _id: string; name: string; email: string }) => {
-    setEditId(student._id);
-    setEditName(student.name);
-    setEditEmail(student.email);
-  };
-
-  const submitEdit = (id: string) => {
-    updateMutation.mutate({ id, name: editName, email: editEmail });
-    setEditId(null);
-  };
-
-  if (isLoading) return <p>Loading students...</p>;
-  if (isError) return <p>Something went wrong</p>;
+  if (isLoading) return <p className="text-yellow-600">Loading students...</p>;
+  if (isError) return <p className="text-red-600 font-medium">Error loading students. Please try again.</p>;
 
   return (
-    <ul className="space-y-3">
-      {data?.map((student) => (
-        <li key={student._id} className="flex justify-between border p-3 rounded items-center">
-          {editId === student._id ? (
-            <>
-              <input
-                className="border p-1 rounded mr-2"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
-              <input
-                className="border p-1 rounded mr-2"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-              />
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-white">Registered Students</h2>
+      <ul className="space-y-3">
+        {data?.map((student: Student) => (
+          <li
+            key={student._id}
+            className="flex justify-between items-center border p-4 rounded-lg shadow-sm hover:shadow-md transition"
+          >
+            <div>
+              <p className="font-bold text-white">{student.name}</p>
+              <p className="text-sm text-white">{student.email}</p>
+            </div>
+            <div className="flex gap-2">
               <button
-                className="bg-green-500 text-white px-2 py-1 rounded mr-2"
-                onClick={() => submitEdit(student._id)}
-                disabled={updateMutation.isPending}
+                className="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-md hover:bg-blue-200 transition font-medium"
+                onClick={() => onEdit(student)}
               >
-                {updateMutation.isPending ? "Saving..." : "Save"}
+                Edit
               </button>
               <button
-                className="bg-gray-400 text-white px-2 py-1 rounded"
-                onClick={() => setEditId(null)}
+                className="bg-red-100 text-red-700 px-4 py-1.5 rounded-md hover:bg-red-200 transition font-medium"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this student?")) {
+                    deleteMutation.mutate(student._id);
+                  }
+                }}
               >
-                Cancel
+                Delete
               </button>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="font-semibold">{student.name}</p>
-                <p className="text-sm text-gray-500">{student.email}</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  className="bg-blue-500 text-white px-2 py-1 rounded"
-                  onClick={() => startEdit(student)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="bg-red-500 text-white px-2 py-1 rounded"
-                  onClick={() => deleteMutation.mutate(student._id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
-        </li>
-      ))}
-    </ul>
+            </div>
+          </li>
+        ))}
+        {!data?.length && <li className="text-gray-400 text-center py-6 border-2 border-dashed rounded-lg">No students found.</li>}
+      </ul>
+    </div>
   );
 }
